@@ -15,7 +15,8 @@ def lerp(a, b, k):
 
 
 class Mesa:
-    def __init__(self, W, H, horizon, seed=11, moon_y=0.36):
+    def __init__(self, W, H, horizon, seed=11, moon_y=0.36, center='pentagrama'):
+        self.center = center
         self.moon_y = moon_y
         self.W, self.H, self.hz = W, H, horizon
         rng = np.random.default_rng(seed)
@@ -142,7 +143,26 @@ class Mesa:
                 q2 = (x + p2[0] * ca_ - p2[1] * sa_, y + p2[0] * sa_ + p2[1] * ca_)
                 d.line([q1, q2], fill=col, width=2)
         # hexagrama + pentagrama interno
-        for k, colk in ((5, col2),):
+        if getattr(self, 'center', 'pentagrama') == 'triluna':
+            # tríplice lua: lua cheia no centro + crescentes voltadas para fora
+            r0 = D * 0.085; gap = D * 0.205
+            d.ellipse((c - r0, c - r0, c + r0, c + r0), outline=col, width=3)
+            d.ellipse((c - r0 * 0.78, c - r0 * 0.78, c + r0 * 0.78, c + r0 * 0.78), outline=col2, width=1)
+            for sgn in (-1, 1):
+                cx2 = c + sgn * gap
+                m = Image.new("L", (D, D), 0); dm = ImageDraw.Draw(m)
+                dm.ellipse((cx2 - r0, c - r0, cx2 + r0, c + r0), fill=255)
+                off = -sgn * r0 * 0.5
+                dm.ellipse((cx2 - r0 * 0.9 + off, c - r0 * 0.95, cx2 + r0 * 0.9 + off, c + r0 * 0.95), fill=0)
+                edge = m.filter(ImageFilter.MaxFilter(3))
+                ring = ImageChops.subtract(edge, m.filter(ImageFilter.MinFilter(5)))
+                im.paste(col, (0, 0), ring)
+            # raios
+            for i in range(48):
+                a = 2 * math.pi * i / 48
+                r1, r2 = D * 0.27, D * (0.31 if i % 2 else 0.33)
+                d.line([(c + r1 * math.sin(a), c - r1 * math.cos(a)), (c + r2 * math.sin(a), c - r2 * math.cos(a))], fill=col, width=1)
+        for k, colk in (((5, col2),) if getattr(self, 'center', 'pentagrama') != 'triluna' else ()):
             R = D * (0.34 if k == 5 else 0.30)
             step = 2 if k == 5 else 1
             pts = [(c + R * math.sin(2 * math.pi * i / k), c - R * math.cos(2 * math.pi * i / k)) for i in range(k)]
